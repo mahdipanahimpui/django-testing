@@ -1,0 +1,15 @@
+to use static files in django
+
+config the settings.py as below:
+
+add 
+'django.contrib.staticfiles'
+in installed apps 
+STATIC_URL = 'static/'
+in settings.py
+
+
+
+========================================
+whole static file that isnt related to specific app, like jumbotron
+ad  STATICFILES_DIR in setting.py

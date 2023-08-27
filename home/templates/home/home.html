@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% load static %} 
+<!-- load static should be the toppest statement -->
+{% block extra_headers %}
+    <link rel="stylesheet" href="{% static 'home/css/style.css' %}">
+{% endblock extra_headers %}
+
+
+{% block content %}
+    <P>in Home Page</P>
+{% endblock %}
