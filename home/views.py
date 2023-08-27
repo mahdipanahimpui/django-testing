@@ -6,3 +6,9 @@ class Home(View):
     template_name = 'home/home.html'
     def get(self, request):
         return render(request, self.template_name)
+    
+
+class About(View):
+    template_name = 'home/home.html'
+    def get(self, request):
+        return render(request, self.template_name)

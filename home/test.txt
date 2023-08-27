@@ -1,0 +1,21 @@
+from django.test import SimpleTestCase, TestCase
+
+# SimpleTestCase(extends TestCase): used to simple testing (not db)
+# TransactionTestCase(extends SimpleTestCase): usee to test db
+# TestCase(extends TransactionTestCase): used to simple and db testing with advance 
+# LiveServerTestCase(extends TransactionTestCase): used to test third party apps
+
+
+# NOTE: how run the tests
+# python manage.py <test module,package,class,method> name
+
+
+# every method is one unit of test
+
+# put Test at first of class name (recommended)
+class TestFirst(SimpleTestCase):
+
+    # def must start with test_ (required)
+    def test_first(self):
+        self.assertFalse(1 == 2)
+        self.assertTrue( 1 == 1)
