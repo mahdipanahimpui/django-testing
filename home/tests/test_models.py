@@ -8,7 +8,7 @@ from model_bakery import baker
 class TestWriterModel(TestCase):
 
     # befor every method runs once
-    def setup(self):
+    def setUp(self):
         # self.writer = Writer.objects.create(
         #     f_name='mahdi',
         #     l_name='panahi',
