@@ -39,7 +39,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'home.apps.HomeConfig', 
 
-    'tracking.apps.TrackingConfig'
+    'tracking.apps.TrackingConfig',
+
+    'rest_framework'
 ]
 
 MIDDLEWARE = [
