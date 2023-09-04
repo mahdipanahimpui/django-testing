@@ -12,13 +12,23 @@ class BaseLoggingMixin:
     sensitive_fields = {} # a set, override by user
     cleaned_substitude = "*" # use to replace with sensitive fields
 
+    # init is called by child automatically,
+    def __init__(self, *args, **kwargs):
+        assert isinstance(self.cleaned_substitude, str), 'cleaned_substitude must be string.' 
+        super().__init__(*args, **kwargs)
+
+
     def initial(self, request, *args, **kwargs):
 
         self.log = {'requested_at': now()}# the key of dict shoul be the field name of BaseAPIRequest
-
+        if getattr(self, 'decode_request_body', app_settings.DECODE_REQUEST_BODY):
+            self.log['data'] = request.data
+        else: 
+            self.log['data'] = ''
 
         # super() called the initial of the APIView(not the BaseLoggingMixin) in the Home view in views.py
         return super().initial(request, *args, **kwargs) 
+
 
     def handle_exception(self, exc):
         response = super().handle_exception(exc)
@@ -151,6 +161,9 @@ class BaseLoggingMixin:
     
 
     def _clean_data(self, data):
+
+        if isinstance(data, bytes):
+            data = data.decode(errors='replace')
 
         if isinstance(data, list):
             return [self._clean_data(d) for d in data if isinstance(d, dict)] # if list of dict is passed

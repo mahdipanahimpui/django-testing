@@ -14,5 +14,5 @@ class Home(LoggingMixin, APIView):
 
     # sensitive_fields = {'pass', 'email'} # sensitive_fields could override 
 
-    def get(self, request):
+    def post(self, request):
         return Response('hello')
