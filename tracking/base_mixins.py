@@ -1,9 +1,11 @@
 from django.utils.timezone import now
 import ipaddress
 from . app_settings import app_settings
+import traceback
 
 
 class BaseLoggingMixin:
+    logging_methods = '__all__' # could override i view classes
 
     def initial(self, request, *args, **kwargs):
 
@@ -13,28 +15,33 @@ class BaseLoggingMixin:
         # super() called the initial of the APIView(not the BaseLoggingMixin) in the Home view in views.py
         return super().initial(request, *args, **kwargs) 
 
-
+    def handle_exception(self, exc):
+        response = super().handle_exception(exc)
+        self.log['errors'] = traceback.format_exc() # convert the raised error to string
+        return response
 
     def finalize_response(self, request, response,*args, **kwargs):
         response = super().finalize_response(request, response,*args, **kwargs)
-        user = self._get_user(request)
-        self.log.update({
-            'remote_addr': self._get_ip_address(request),
-            'view': self._get_view_name(request),
-            'view_method': self._get_veiw_method(request),
-            'path': self._get_path(request),
-            'host': request.get_host(),
-            'method': request.method,
-            'user': user,
-            'username_persistent': user.get_username() if user else "Anonymous",  # get_username is for django
-            'response_ms': self._get_response_ms(),
-            'status_code': response.status_code
 
+        if self.should_log(request, response):
+
+            user = self._get_user(request)
+            self.log.update({
+                'remote_addr': self._get_ip_address(request),
+                'view': self._get_view_name(request),
+                'view_method': self._get_veiw_method(request),
+                'path': self._get_path(request),
+                'host': request.get_host(),
+                'method': request.method,
+                'user': user,
+                'username_persistent': user.get_username() if user else "Anonymous",  # get_username is for django
+                'response_ms': self._get_response_ms(),
+                'status_code': response.status_code
         })
+            self.handle_log() # every thing in parrent is available in the childrens, so self.handle_log() is called by child in when
+            # Home(LoggingMixin, APIView) => LoggingMixin(BaseLoggingMixin) => in BaseLogginMixin is self.handle_log() 
+            # print('self in self.handle_log(): ', self) # <tracking.views.Home object at 0x7f3c3c495c50>
 
-        self.handle_log() # every thing in parrent is available in the childrens, so self.handle_log() is called by child in when
-        # Home(LoggingMixin, APIView) => LoggingMixin(BaseLoggingMixin) => in BaseLogginMixin is self.handle_log() 
-        # print('self in self.handle_log(): ', self) # <tracking.views.Home object at 0x7f3c3c495c50>
 
         # super() called the finalize_response of the APIView(not the BaseLoggingMixin) in the Home view in views.py
         return response
@@ -109,3 +116,11 @@ class BaseLoggingMixin:
         response_timedelta = now() - self.log['requested_at']
         response_ms = int(response_timedelta.total_seconds() * 1000) # to convet mili seconds
         return max(response_ms, 0)
+    
+
+    # with wich condition logging, (could override by user)
+    def should_log(self, request, response): 
+        # if __all__ return true else return true if the method exists in the logging_methods
+        return (
+            self.logging_methods == '__all__' or request.method in self.logging_methods
+        )
