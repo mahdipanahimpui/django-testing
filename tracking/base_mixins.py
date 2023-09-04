@@ -50,9 +50,6 @@ class BaseLoggingMixin:
             else:
                 rendered_content = response.getvalue()
                 
-
-            print(rendered_content)
-
         
 
             self.log.update({
@@ -106,15 +103,15 @@ class BaseLoggingMixin:
             # so handle to get just ipv4/6 not port or list
 
             # lstrip('[') remover the '[' until is not the first char
-            possibles = (ipaddr.lstrip('[').split(']'), ipaddr.split(':')[0]) # it is a tuple index0 handle the first, second and 4th posibles and the index1 handle the third one.
+        possibles = (ipaddr.lstrip('[').split(']')[0], ipaddr.split(':')[0]) # it is a tuple index0 handle the first, second and 4th posibles and the index1 handle the third one.
 
-            for addr in possibles:
-                try:
-                    return str(ipaddress.ip_address(addr))  # return the ip by its type v4 or v6 in result
-                except:
-                    pass
+        for addr in possibles:
+            try:
+                return str(ipaddress.ip_address(addr))  # return the ip by its type v4 or v6 in result
+            except:
+                pass
 
-            return addr
+        return ipaddr
         
 
     def _get_view_name(self, request):

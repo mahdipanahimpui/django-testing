@@ -1,0 +1,2 @@
+comment all the code in tests directory, 
+to test other packages by python manage.py test
