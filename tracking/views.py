@@ -12,5 +12,7 @@ class Home(LoggingMixin, APIView):
     # def should_log(self, request, response): # could override the shoul_log
     #     return response.satatus_code >= 400
 
+    # sensitive_fields = {'pass', 'email'} # sensitive_fields could override 
+
     def get(self, request):
         return Response('hello')

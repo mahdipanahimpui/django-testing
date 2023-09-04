@@ -2,10 +2,15 @@ from django.utils.timezone import now
 import ipaddress
 from . app_settings import app_settings
 import traceback
+import logging
+import ast
 
+logger = logging.getLogger(__name__)
 
 class BaseLoggingMixin:
     logging_methods = '__all__' # could override i view classes
+    sensitive_fields = {} # a set, override by user
+    cleaned_substitude = "*" # use to replace with sensitive fields
 
     def initial(self, request, *args, **kwargs):
 
@@ -26,6 +31,20 @@ class BaseLoggingMixin:
         if self.should_log(request, response):
 
             user = self._get_user(request)
+
+            # Note: var defined in inner if is available in outer if or for
+            if response.streaming:
+                rendered_content = None
+            elif hasattr(response, 'rendered_content'):
+                rendered_content = response.rendered_content
+            else:
+                rendered_content = response.getvalue()
+                
+
+            print(rendered_content)
+
+        
+
             self.log.update({
                 'remote_addr': self._get_ip_address(request),
                 'view': self._get_view_name(request),
@@ -36,11 +55,16 @@ class BaseLoggingMixin:
                 'user': user,
                 'username_persistent': user.get_username() if user else "Anonymous",  # get_username is for django
                 'response_ms': self._get_response_ms(),
-                'status_code': response.status_code
+                'status_code': response.status_code,
+                'query_params': self._clean_data(request.query_params.dict()),
+                'response': self._clean_data(rendered_content)
         })
-            self.handle_log() # every thing in parrent is available in the childrens, so self.handle_log() is called by child in when
-            # Home(LoggingMixin, APIView) => LoggingMixin(BaseLoggingMixin) => in BaseLogginMixin is self.handle_log() 
-            # print('self in self.handle_log(): ', self) # <tracking.views.Home object at 0x7f3c3c495c50>
+            try:
+                self.handle_log() # every thing in parrent is available in the childrens, so self.handle_log() is called by child in when
+                # Home(LoggingMixin, APIView) => LoggingMixin(BaseLoggingMixin) => in BaseLogginMixin is self.handle_log() 
+                # print('self in self.handle_log(): ', self) # <tracking.views.Home object at 0x7f3c3c495c50>
+            except Exception:
+                logger.exception('logging API cal raise exception')
 
 
         # super() called the finalize_response of the APIView(not the BaseLoggingMixin) in the Home view in views.py
@@ -124,3 +148,31 @@ class BaseLoggingMixin:
         return (
             self.logging_methods == '__all__' or request.method in self.logging_methods
         )
+    
+
+    def _clean_data(self, data):
+
+        if isinstance(data, list):
+            return [self._clean_data(d) for d in data if isinstance(d, dict)] # if list of dict is passed
+
+        elif isinstance(data, dict):
+            SENSITIVE_FIELDS = {'api', 'token', 'key', 'secret', 'signature'}
+
+            if self.sensitive_fields:
+                # to add to set use |
+                SENSITIVE_FIELDS = SENSITIVE_FIELDS | {field.lower() for field in self.sensitive_fields}
+
+            for key, value in data.items():
+
+                try:
+                    value = ast.literal_eval(value) # literal_eval returns python syntax, ex) if value is like "{'name': 'hello'}" result is {'name': 'hello'}
+                except (ValueError, SyntaxError):
+                    pass # because the value is not literal_eval
+
+                if isinstance(value, (list, dict)):
+                    data[key] = self._clean_data(value)
+                
+                if key.lower() in SENSITIVE_FIELDS:
+                    data[key] = self.cleaned_substitude
+
+        return data
