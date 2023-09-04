@@ -1,6 +1,6 @@
 from django.utils.timezone import now
 import ipaddress
-
+from . app_settings import app_settings
 
 
 class BaseLoggingMixin:
@@ -16,20 +16,29 @@ class BaseLoggingMixin:
 
 
     def finalize_response(self, request, response,*args, **kwargs):
-        
+        response = super().finalize_response(request, response,*args, **kwargs)
+        user = self._get_user(request)
         self.log.update({
-            'remote_addr': self._get_ip_address(request)
+            'remote_addr': self._get_ip_address(request),
+            'view': self._get_view_name(request),
+            'view_method': self._get_veiw_method(request),
+            'path': self._get_path(request),
+            'host': request.get_host(),
+            'method': request.method,
+            'user': user,
+            'username_persistent': user.get_username() if user else "Anonymous",  # get_username is for django
+            'response_ms': self._get_response_ms(),
+            'status_code': response.status_code
+
         })
 
         self.handle_log() # every thing in parrent is available in the childrens, so self.handle_log() is called by child in when
         # Home(LoggingMixin, APIView) => LoggingMixin(BaseLoggingMixin) => in BaseLogginMixin is self.handle_log() 
-
-
+        # print('self in self.handle_log(): ', self) # <tracking.views.Home object at 0x7f3c3c495c50>
 
         # super() called the finalize_response of the APIView(not the BaseLoggingMixin) in the Home view in views.py
-        return super().finalize_response(request, response,*args, **kwargs)
+        return response
     
-
 
     def handle_log(self):
         raise NotImplemented # to force the child to over ride this method to use in finalize_response
@@ -37,6 +46,7 @@ class BaseLoggingMixin:
 
 
     def _get_ip_address(self, request):
+
 
     # attrs in request.META to get ip
         # REMOTE_ADDR => the presented ip (real ip or proxy ip)
@@ -64,3 +74,38 @@ class BaseLoggingMixin:
                     pass
 
             return addr
+        
+
+    def _get_view_name(self, request):
+        method = request.method.lower()
+        # print(self) # <tracking.views.Home object at 0x7f989f747dd0>
+        # print(getattr(self, method)) # <bound method Home.get of <tracking.views.Home object at 0x7f3c3c495c50>>
+        try:
+            attr = getattr(self, method)
+            # print(type(attr.__self__)) # <class 'tracking.views.Home'>
+            return type(attr.__self__).__module__ + '.' + type(attr.__self__).__module__
+        except AttributeError:
+            return None
+        
+
+    def _get_veiw_method(self, request): 
+        if hasattr(self, 'action'):
+            return self.action or None
+        return request.method.lower()
+
+
+    def _get_path(self, request):
+        return request.path[:app_settings.PATH_LENGTH]
+    
+
+    def _get_user(self, request):
+        user = request.user
+        if user.is_anonymous:
+            return None
+        return user
+    
+
+    def _get_response_ms(self):
+        response_timedelta = now() - self.log['requested_at']
+        response_ms = int(response_timedelta.total_seconds() * 1000) # to convet mili seconds
+        return max(response_ms, 0)
