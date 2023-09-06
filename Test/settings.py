@@ -134,3 +134,12 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static'
 ]
+
+
+import sys 
+import logging
+
+# if in command statement there is more than of arg and the second is test:
+# changing the logging level
+if len(sys.argv) > 1 and sys.argv[1] == 'test':
+    logging.disable(logging.CRITICAL)
